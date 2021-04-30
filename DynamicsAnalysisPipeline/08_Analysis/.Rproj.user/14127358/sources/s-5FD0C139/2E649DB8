@@ -1,0 +1,25 @@
+{
+    "id": "2E649DB8",
+    "path": "~/image-analysis/08_Analysis/CellAnalysis/Distance.R",
+    "project_path": "CellAnalysis/Distance.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1592520966796.0,
+    "source_on_save": false,
+    "relative_order": 6,
+    "properties": {
+        "tempName": "Untitled2",
+        "cursorPosition": "327,0",
+        "scrollLine": "323"
+    },
+    "folds": "36|37|191|0|\n340|35|410|0|\n",
+    "lastKnownWriteTime": 1592831386,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1592831386335,
+    "read_only": false,
+    "read_only_alternatives": []
+}

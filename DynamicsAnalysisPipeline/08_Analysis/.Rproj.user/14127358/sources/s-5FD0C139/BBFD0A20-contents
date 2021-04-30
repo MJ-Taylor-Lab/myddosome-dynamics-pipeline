@@ -1,0 +1,137 @@
+setwd("/Volumes/taylor-lab/Rafael/DataAnalysis/2019 Manuscript Figures/IRAK_KO/Max Intensity")
+
+ggplot(
+  GrandTracksKO
+) +
+  geom_density(
+    aes(
+      x = MAX_NORMALIZED_INTENSITY,
+      color = as.factor(GROUP),
+      y = ..density..*100
+    ),
+    alpha = 0.5) +
+  labs(
+    x = "Max Fluorescence Intensity (a.u.)",
+    y = "% of MyD88 tracks") +
+  scale_color_brewer(
+    palette = "Set2",
+    name = "Cell Line") +
+  # scale_x_continuous(
+  #   limits = c(0, 20)
+  # ) +
+  theme_classic() +
+  theme(
+    legend.position = c(0.8, 0.8),
+    legend.background = element_blank()
+  ) +
+  ggsave(
+    file = paste("Pub", DATE_TODAY, "IRAK_KO", "MaxIntbyLife-Density.svg", sep="_"),
+    plot = last_plot(),
+    width = 3,
+    height = 3) +
+  ggsave(
+    file = paste("Pub", DATE_TODAY, "IRAK_KO", "MaxIntbyLife-Density.pdf", sep="_"),
+    plot = last_plot(),
+    width = 3,
+    height = 3)
+
+Panel5DSummary <-
+  MaxIntPlot %>%
+  ungroup() %>%
+  group_by(
+    GROUP,
+    IMAGE,
+    CELL
+  ) %>%
+  summarize(
+    MEAN = mean(MAX_NORMALIZED_INTENSITY),
+    SD = sd(MAX_NORMALIZED_INTENSITY)
+  ) %>%
+  ungroup() %>%
+  group_by(
+    GROUP
+  ) %>%
+  summarize(
+    N = n(),
+    SD = sd(MEAN),
+    MEAN = mean(MEAN),
+    SE = SD/sqrt(N)
+  )
+
+write.csv(Panel5DSummary, "Panel5DSummary.csv")
+
+TestWT <-
+  MaxIntPlot %>%
+  filter(
+    GROUP == "WT"
+  ) %>%
+  group_by(
+    IMAGE,
+    CELL
+  ) %>%
+  summarize(
+    MAX_NORMALIZED_INTENSITY = mean(MAX_NORMALIZED_INTENSITY)
+  )
+
+Test4 <-
+  MaxIntPlot %>%
+  filter(
+    GROUP == "IRAK4_KO"
+  ) %>%
+  group_by(
+    IMAGE,
+    CELL
+  ) %>%
+  summarize(
+    MAX_NORMALIZED_INTENSITY = mean(MAX_NORMALIZED_INTENSITY)
+  )
+
+Test1 <-
+  MaxIntPlot %>%
+  filter(
+    GROUP == "IRAK1_KO"
+  ) %>%
+  group_by(
+    IMAGE,
+    CELL
+  ) %>%
+  summarize(
+    MAX_NORMALIZED_INTENSITY = mean(MAX_NORMALIZED_INTENSITY)
+  )
+
+t.test(TestWT$MAX_NORMALIZED_INTENSITY, Test4$MAX_NORMALIZED_INTENSITY)
+
+t.test(TestWT$MAX_NORMALIZED_INTENSITY, Test1$MAX_NORMALIZED_INTENSITY)
+
+
+
+Test4 <-
+  MaxIntPlot %>%
+  filter(
+    GROUP != "IRAK1_KO"
+  ) %>%
+  group_by(
+    GROUP,
+    IMAGE,
+    CELL
+  ) %>%
+  summarize(
+    MEAN = mean(MAX_NORMALIZED_INTENSITY)
+  )
+
+Test1 <-
+  MaxIntPlot %>%
+  filter(
+    GROUP != "IRAK4_KO"
+  )%>%
+  group_by(
+    GROUP,
+    IMAGE,
+    CELL
+  ) %>%
+  summarize(
+    MEAN = mean(MAX_NORMALIZED_INTENSITY)
+  )
+
+car::Anova(lm(MEAN ~ GROUP, Test4), type = "3")
+car::Anova(lm(MEAN ~ GROUP, Test1), type = "3")

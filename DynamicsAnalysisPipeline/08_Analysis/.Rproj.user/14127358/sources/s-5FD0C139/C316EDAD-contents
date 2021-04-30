@@ -1,0 +1,80 @@
+if("data.table" %in% rownames(installed.packages()) == FALSE)
+{install.packages("data.table")}
+library(data.table)
+
+if(exists("GrandTable")) {} else {
+  setwd(ANALYSIS_DIRECTORY)
+  filename = "GrandTableSpots"
+  GrandTable <-
+    data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+}
+if(exists("GrandTracks")) {} else {
+  setwd(ANALYSIS_DIRECTORY)
+  filename = "GrandTableTracks"
+  GrandTracks <-
+    data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+}
+
+#Number of images to run
+ColocalizationIntensityImageFx <- function(ImageX) {
+  tryCatch({
+    #Foflder to image set
+    FOLDER = paste(ANALYSIS_DIRECTORY, ColocalizationInput$COHORT[ImageX], ColocalizationInput$IMAGE[ImageX], sep = "/")
+    COLOCALIZATION = ColocalizationInput$COLOCALIZATION[ImageX]
+    COHORT = ColocalizationInput$COHORT[ImageX]
+    GROUP = ColocalizationInput$GROUP[ImageX]
+    IMAGE = ColocalizationInput$IMAGE[ImageX]
+    LIGAND_DENSITY = ColocalizationInput$LIGAND_DENSITY[ImageX]
+    LIGAND_DENSITY_CAT = ColocalizationInput$LIGAND_DENSITY_CAT[ImageX]
+    CELLS = ColocalizationInput$CELLS[ImageX]
+    #Input feedback
+    print(paste("Colocalization Intensity ImageX =", ImageX))
+    
+    #CELLS LOOP
+    ColocalizationIntensityCellFx <- function (CellX) {
+      tryCatch({
+        #Change cells directory
+        setwd(paste(FOLDER, "/Cell_", CellX, "/", COLOCALIZATION, sep = ""))
+        #Display working directory
+        print(paste("ColocalizationIntensityCellFx ImageX =", ImageX, "CellX =", CellX))
+        
+        setwd(paste(FOLDER, "/Cell_", CellX, sep = ""))
+        filename = "ReformattedColocalization"
+        ColocalizationData <-
+          data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+        
+        #Save file
+        filename = "ColocalizationIntensity"
+        file.remove(paste(filename, ".csv.gz", sep = ""))
+        data.table::fwrite(ExpData, paste(filename, ".csv.gz", sep = ""), row.names = F, na = "")
+        ExpData <<- ExpData
+        ExpData
+      },
+      error = function(e) {print(paste("   ERROR with ColocalizationIntensityCellFx ImageX =", ImageX, " CellX =", CellX))})
+    }
+    #Loop
+    nCells = 1:CELLS
+    ColocIntCells <- mclapply(nCells, ColocalizationIntensityCellFx)
+    ColocIntCells <- ColocIntCells[(which(sapply(ColocIntCells,is.list), arr.ind=TRUE))]
+    ColocIntCells <- do.call(bind_rows, ColocIntCells)
+    
+    setwd(FOLDER)
+    filename = "SummaryTableOf_ColocalizationIntensity"
+    file.remove(paste(filename, ".csv.gz", sep = ""))
+    data.table::fwrite(ColocIntCells, paste(filename, ".csv.gz", sep = ""), row.names = F, na = "")
+    
+    ColocIntCells <<- ColocIntCells
+    ColocIntCells
+  }, error = function(e) {print(paste("   ERROR with ColocalizationIntensityImageFx ImageX =", ImageX))})
+}
+
+#Run colocalization loop by image
+nImages = 1:NROW(ColocalizationInput)
+ColocIntImages <- mclapply(nImages, ColocalizationIntensityImageFx)
+ColocIntImages <- ColocIntImages[(which(sapply(ColocIntImages,is.list), arr.ind=TRUE))]
+ColocIntImages <- do.call(bind_rows, ColocIntImages)
+
+setwd(COLOCALIZATION_DIRECTORY)
+filename = "SummaryTableOf_ColocalizationIntensity"
+file.remove(paste(filename, ".csv.gz", sep = ""))
+data.table::fwrite(ColocIntImages, paste(filename, ".csv.gz", sep = ""), row.names = F, na = "")

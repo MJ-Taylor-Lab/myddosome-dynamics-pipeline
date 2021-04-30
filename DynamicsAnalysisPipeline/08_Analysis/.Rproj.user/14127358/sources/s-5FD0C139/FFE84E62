@@ -1,0 +1,25 @@
+{
+    "id": "FFE84E62",
+    "path": "~/image-analysis/08_Analysis/KO/Panel_G_AverageIntensityByLifetime.R",
+    "project_path": "KO/Panel_G_AverageIntensityByLifetime.R",
+    "type": "r_source",
+    "hash": "3535804884",
+    "contents": "",
+    "dirty": false,
+    "created": 1592402430233.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "tempName": "Untitled1",
+        "cursorPosition": "220,4",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1592474250,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1592474250,
+    "read_only": false,
+    "read_only_alternatives": []
+}

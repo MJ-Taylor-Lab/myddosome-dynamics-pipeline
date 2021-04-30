@@ -1,0 +1,145 @@
+# For initiating image analysis pipeline
+#Clean everything
+remove(list = ls())
+gc(reset = TRUE)
+
+###########################o
+###     USER INPUT      ###
+###########################
+#Folder containing all scripts
+SCRIPTS_DIRECTORY = "/Users/u_deliz/image-analysis/08_Analysis"
+#Folder containing all data
+TOP_DIRECTORY = "/Volumes/taylor-lab/Rafael/ImageAnalysisWorkflow"
+#Folder containing calibration and input data
+SETUP_FOLDER = "00_Setup"
+#Folder containing all images
+#ANALYSIS_FOLDER = "Colocalization_Test"
+ANALYSIS_FOLDER = "08_Analysis"
+#List of images to analyze
+INPUT_DATA = "2020-05-26 R_Input.csv"
+#Calibration images
+CALIBRATION_INPUT_DATA = "Calibrations.csv" 
+#Scripts to run
+#T is true, meaning run
+#F is false, meaning do not run
+RUN_CALIBRATION_SCRIPTS = F
+RUN_CELLANALYSIS_SCRIPTS = F
+RUN_FINALSUMMARY_SCRIPTS = T
+RUN_TRACKGRAPHS_SCRIPTS = F
+RUN_IMAGEGRAPHS_SCRIPTS = F
+RUN_PROTEINGRAPHS_SCRIPTS = F
+RUN_DENSITYGRAPHS_SCRIPTS = F
+RUN_COLOCALIZATION_SCRIPTS = F
+RUN_EXTREMA_SCRIPTS = F
+
+PROTEIN_ORDER = c("MyD88", "IRAK4", "IRAK1","IRAK4_KO", "IRAK1_KO", "TRAF6", "HOIL1")
+
+###########################
+###    CALL SCRIPTS     ###
+###########################
+
+SETUP_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "Setup", sep = "/")
+setwd(SETUP_SCRIPTS)
+print("Setup.R")
+source("Setup.R", local = T)
+
+tryCatch({
+  if(RUN_CALIBRATION_SCRIPTS == T){
+    print(":::::::::::::::::::: CalibrationSetup.r ::::::::::::::::::::")
+    CALIBRATION_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "Calibration", sep = "/")
+    setwd(CALIBRATION_SCRIPTS)
+    print("Running script CalibrationSetup.R")
+    source("CalibrationSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with CALIBRATION_SCRIPTS")})
+
+tryCatch({
+  if(RUN_CELLANALYSIS_SCRIPTS == T){
+    print(":::::::::::::::::::: CellAnalysisSetup.r ::::::::::::::::::::")
+    CELLANALYSIS_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "CellAnalysis", sep = "/")
+    setwd(CELLANALYSIS_SCRIPTS)
+    print("Running script CellAnalysisSetup.R")
+    source("CellAnalysisSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with CELLANALYSIS_SCRIPTS")})
+
+tryCatch({
+  if(RUN_FINALSUMMARY_SCRIPTS == T){
+    print(":::::::::::::::::::: FinalSummarySetup.r ::::::::::::::::::::")
+    FINALSUMMARY_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "FinalSummary", sep = "/")
+    setwd(FINALSUMMARY_SCRIPTS)
+    print("Running script FinalSummarySetup.R")
+    source("FinalSummarySetup.R", local = T)
+  }
+}, error = function(e) {print("Error with FINALSUMMARY_SCRIPTS")})
+
+tryCatch({
+  if(RUN_TRACKGRAPHS_SCRIPTS == T){
+    print(":::::::::::::::::::: TrackGraphsSetup.r ::::::::::::::::::::")
+    TRACKGRAPHS_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "TrackGraphs", sep = "/")
+    setwd(TRACKGRAPHS_SCRIPTS)
+    print("Running script TrackGraphsSetup.R")
+    source("TrackGraphsSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with TRACKGRAPHS_SCRIPTS")})
+
+tryCatch({
+  if(RUN_IMAGEGRAPHS_SCRIPTS == T){
+    print(":::::::::::::::::::: ImageGraphsSetup.r ::::::::::::::::::::")
+    IMAGEGRAPHS_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "ImageGraphs", sep = "/")
+    setwd(IMAGEGRAPHS_SCRIPTS)
+    print("Running script ImageGraphsSetup.R")
+    source("ImageGraphsSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with IMAGEGRAPHS_SCRIPTS")})
+
+tryCatch({
+  if(RUN_PROTEINGRAPHS_SCRIPTS == T){
+    print(":::::::::::::::::::: ProteinGraphsSetup.r ::::::::::::::::::::")
+    PROTEINGRAPHS_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "ProteinGraphs", sep = "/")
+    setwd(PROTEINGRAPHS_SCRIPTS)
+    print("Running script ProteinGraphsSetup.R")
+    source("ProteinGraphsSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with PROTEINGRAPHS_SCRIPTS")})
+
+tryCatch({
+  if(RUN_DENSITYGRAPHS_SCRIPTS == T){
+    print(":::::::::::::::::::: DensityGraphsSetup.r ::::::::::::::::::::")
+    DENSITYGRAPHS_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "DensityGraphs", sep = "/")
+    setwd(DENSITYGRAPHS_SCRIPTS)
+    print("Running script DensityGraphsSetup.R")
+    source("DensityGraphsSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with DENSITYGRAPHS_SCRIPTS")})
+
+tryCatch({
+  if(RUN_COLOCALIZATION_SCRIPTS == T){
+    print(":::::::::::::::::::: ColocalizationSetup.r ::::::::::::::::::::")
+    COLOCALIZATION_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "Colocalization", sep = "/")
+    setwd(COLOCALIZATION_SCRIPTS)
+    print("Running script ColocalizationSetup.R")
+    source("ColocalizationSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with COLOCALIZATION_SCRIPTS")})
+
+tryCatch({
+  if(RUN_EXTREMA_SCRIPTS == T){
+    print(":::::::::::::::::::: ColocalizationSetup.r ::::::::::::::::::::")
+    EXTREMA_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "Extrema", sep = "/")
+    setwd(EXTREMA_SCRIPTS)
+    print("Running script ExtremaSetup.R")
+    source("ExtremaSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with EXTREMA_SCRIPTS")})
+
+
+tryCatch({
+  if(RUN_EXTREMA_SCRIPTS == T){
+    print(":::::::::::::::::::: ColocalizationSetup.r ::::::::::::::::::::")
+    KO_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "KO", sep = "/")
+    setwd(KO_SCRIPTS)
+    print("Running script KOSetup.R")
+    source("KOSetup.R", local = T)
+  }
+}, error = function(e) {print("Error with EXTREMA_SCRIPTS")})

@@ -1,0 +1,25 @@
+{
+    "id": "BBFD0A20",
+    "path": "~/image-analysis/08_Analysis/KO/Panel_D_MaxIntensity.R",
+    "project_path": "KO/Panel_D_MaxIntensity.R",
+    "type": "r_source",
+    "hash": "505207006",
+    "contents": "",
+    "dirty": false,
+    "created": 1592405510432.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "tempName": "Untitled1",
+        "cursorPosition": "31,9",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1592482955,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1592482955,
+    "read_only": false,
+    "read_only_alternatives": []
+}

@@ -1,0 +1,219 @@
+setwd(KO_DIRECTORY)
+
+filename = "GrandTracksKO"
+GrandTracksKO <-
+  data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+
+setwd("/Volumes/taylor-lab/Rafael/DataAnalysis/2019 Manuscript Figures/IRAK_KO/Percent Asssembled")
+
+GrandTracksKO <-
+  GrandTracksKO %>%
+  filter(
+    IMAGE %in% IMAGES
+  )
+
+ViolinTracks <-
+  GrandTracksKO %>%
+  filter(
+    LIGAND_DENSITY_CAT == "32 mol. µm^-2"
+  ) %>%
+  ungroup() %>%
+  mutate(
+    IMAGENUMBER = group_indices(., GROUP, IMAGE)
+  ) %>%
+  group_by(
+    GROUP
+  ) %>%
+  mutate(
+    IMAGENUMBER = IMAGENUMBER - min(IMAGENUMBER) + 1,
+    IMAGENUMBER = as.factor(IMAGENUMBER)
+  )
+  
+ViolinCells <-
+  ViolinTracks %>%
+  ungroup() %>%
+  mutate(
+    MEAN = ifelse(MAX_INTENSITY_CAT == "≥4.5", 1, 0),
+    MEAN = as.numeric(MEAN),
+  ) %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER,
+    CELL
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN, na.rm = T)
+  )
+
+ViolinImg <-
+  ViolinCells %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN, na.rm = T)
+  )
+
+ViolinLigand <-
+  ViolinImg %>%
+  group_by(
+    GROUP
+  ) %>%
+  summarize(
+    SD = sd(MEAN, na.rm = T),
+    SE = SD/sqrt(n()),
+    MEAN = mean(MEAN, na.rm = T)
+  )
+
+#T Test
+Test <-
+  ViolinCells %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN)
+  )
+
+stat.test <- compare_means(
+  MEAN ~ GROUP, data = Test,
+  method = "t.test" #for non-parametric, use wilcox.test
+)
+
+stat.test <- stat.test[1:2,]
+
+ggplot(
+  ViolinCells
+) +
+  geom_violin(
+    aes(
+      x = GROUP,
+      y = MEAN*100
+    ),
+    size = 2,
+    fill = "darkgrey",
+    color = "darkgrey"
+  ) +
+  geom_crossbar(
+    data = ViolinLigand,
+    aes(
+      x = GROUP,
+      ymin = MEAN*100,
+      y = MEAN*100,
+      ymax = MEAN*100
+    ),
+    color = "black",
+    width = 0.75
+  ) +
+  geom_errorbar(
+    data = ViolinLigand,
+    aes(
+      x = GROUP,
+      ymin = MEAN*100 - SE*100,
+      ymax = MEAN*100 + SE*100,
+    ),
+    color = "black",
+    width = 0.5
+  ) +
+  geom_jitter(
+    data = ViolinImg,
+    aes(
+      x = GROUP,
+      y = MEAN*100,
+      group = IMAGENUMBER,
+      fill = GROUP
+    ),
+    size = 3,
+    color = "black",
+    shape = 21,
+  ) +
+  stat_pvalue_manual(
+    stat.test,
+    y.position = c(85, 95),
+    label = paste("p = {p.format}", " ({p.signif})")
+  ) +
+  scale_color_brewer(palette = "Set2") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_y_continuous( 
+    limits = c(0,100)
+  ) +
+  labs(
+    y = "%  MyD88-GFP puncta per cell\n(≥4.5xGFP)",
+    x = "Cell Line",
+    color = "Replicate",
+    shape = "Replicate"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none"
+  ) +
+  ggsave(
+    file = paste(DATE_TODAY, "Assembled-Violin.svg", sep="_"),
+    width = 3,
+    height = 3
+  ) +
+  ggsave(
+    file = paste(DATE_TODAY, "Assembled-Violin.pdf", sep="_"),
+    width = 3,
+    height = 3
+  )
+
+Summary <-
+  ViolinCells %>%
+  ungroup() %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER,
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN),
+  ) %>%
+  group_by(
+    GROUP,
+  ) %>%
+  summarize(
+    N = n(),
+    SD = sd(MEAN),
+    MEAN = mean(MEAN),
+  )
+
+write.csv(Summary, "Summary.csv")
+
+# 
+# Test <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP != "IRAK1_KO"
+#   ) %>%
+#   group_by(
+#     GROUP,
+#     IMAGENUMBER
+#   ) %>%
+#   summarize(
+#     MEAN = mean(MEAN)
+#   )
+# 
+# StatTest <- car::Anova(lm(MEAN ~ GROUP, Test), type = "3")
+# StatR <- StatTest$`Sum Sq`[2]/StatTest$`Sum Sq`[3]
+# StatP <- StatTest$`Pr(>F)`[2]
+# StatName1 <- "WT"
+# StatName2 <- "IRAK4_KO"
+# 
+# Stats <- cbind(StatName1, StatName2, StatR, StatP)
+# names("group1", "group2", "R", "p")
+# 
+# 
+# Test1 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP != "IRAK4_KO"
+#   ) %>%
+#   group_by(
+#     GROUP,
+#     IMAGENUMBER
+#   ) %>%
+#   summarize(
+#     MEAN = mean(MEAN)
+#   )

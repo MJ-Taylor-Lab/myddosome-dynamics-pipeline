@@ -1,0 +1,121 @@
+setwd(KO_DIRECTORY)
+
+filename = "GrandTracksKO"
+GrandTracksKO <-
+  data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+
+setwd("/Volumes/taylor-lab/Rafael/DataAnalysis/2019 Manuscript Figures/IRAK_KO/Change in Intensity by Lifetime")
+
+my.formula <- y ~ x
+
+GrandTracksKOFiltered <-
+  GrandTracksKO %>%
+  filter(
+    IMAGE %in% IMAGES,
+    LIGAND_DENSITY_CAT == "32 mol. µm^-2",
+    STARTING_NORMALIZED_INTENSITY_CAT == 0
+  ) %>%
+  mutate(
+    GROUP = factor(GROUP, levels = c("WT", "IRAK4_KO", "IRAK1_KO")),
+  )
+
+MaxLim <-
+  GrandTracksKOFiltered %>%
+  filter(START_TO_MAX_INTENSITY < 65)
+
+MaxLim <- max(MaxLim$START_TO_MAX_INTENSITY)
+
+ggplot(
+  GrandTracksKOFiltered %>% filter(START_TO_MAX_INTENSITY < 65),
+  aes(
+    x = LIFETIME,
+    y = START_TO_MAX_INTENSITY
+  )
+) +
+  geom_hex(
+    aes(
+      x = LIFETIME,
+      y = START_TO_MAX_INTENSITY,
+      fill = ..count..
+    ),
+    color = "black",
+    bins = 25
+  ) +
+  geom_smooth(
+    method = "lm",
+    formula = my.formula,
+    se = TRUE,
+  ) +
+  stat_cor(
+    data = GrandTracksKOFiltered,
+    aes(
+      x = LIFETIME,
+      y = START_TO_MAX_INTENSITY
+    ),
+    method = "spearman"
+  ) +
+  scale_fill_distiller(
+    palette = "RdPu",
+    direction = 1,
+    trans = "log10",
+    breaks = trans_breaks("log10", function(x) 10^x),
+    labels = trans_format("log10", math_format(10^.x))
+  ) +
+  facet_wrap(~ GROUP, scales = "free_y", nrow = 1) +
+  scale_y_continuous(
+    limits = c(0, MaxLim)
+  ) +
+  labs(
+    y = "Norm. ∆Intensity",
+    x = "Lifetime (s)",
+    fill = "# MyD88-GFP puncta (log scale)") +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    strip.background = element_blank()
+  ) +
+  ggsave(
+    file = paste(DATE_TODAY, "OverallDelta-LifetimeKO-2Dsuper-lin-lin.svg", sep = "_"),
+    width = 9,
+    height = 4) +
+  ggsave(
+    file = paste(DATE_TODAY, "OverallDelta-LifetimeKO-2Dsuper-lin-lin.pdf", sep = "_"),
+    width = 9,
+    height = 4)
+# 
+# 
+# CorData <-
+#   GrandTracksKOFiltered %>%
+#   filter(
+#     GROUP == "WT"
+#   )
+# 
+# cor(CorData$LIFETIME, CorData$START_TO_MAX_INTENSITY, method = "spearman")
+# cor(CorData$LIFETIME, CorData$START_TO_MAX_INTENSITY, method = "pearson")
+# NROW(CorData)
+# lm(LIFETIME ~ START_TO_MAX_INTENSITY, CorData)
+# 
+# 
+# CorData <-
+#   GrandTracksKOFiltered %>%
+#   filter(
+#     GROUP == "IRAK4_KO"
+#   )
+# 
+# cor(CorData$LIFETIME, CorData$START_TO_MAX_INTENSITY, method = "spearman")
+# cor(CorData$LIFETIME, CorData$START_TO_MAX_INTENSITY, method = "pearson")
+# NROW(CorData)
+# lm(LIFETIME ~ START_TO_MAX_INTENSITY, CorData)
+# 
+# 
+# CorData <-
+#   GrandTracksKOFiltered %>%
+#   filter(
+#     GROUP == "IRAK1_KO"
+#   )
+# 
+# cor(CorData$LIFETIME, CorData$START_TO_MAX_INTENSITY, method = "spearman")
+# cor(CorData$LIFETIME, CorData$START_TO_MAX_INTENSITY, method = "pearson")
+# NROW(CorData)
+# 
+# lm(LIFETIME ~ START_TO_MAX_INTENSITY, CorData)

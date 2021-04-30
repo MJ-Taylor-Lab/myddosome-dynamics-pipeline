@@ -1,0 +1,27 @@
+SourceDistanceTracks <-
+  DistanceTableFiltered %>%
+  ungroup() %>%
+  select(
+    SOURCE_ID,
+    PAIR
+  )
+
+SourceList <- as.array(SourceDistanceTracks$SOURCE_ID)
+
+SourceExpTracks <-
+  ExpTracks %>%
+  filter(
+    UNIVERSAL_TRACK_ID %in% SourceList
+  )
+
+SourceDistanceTracks <- merge(SourceDistanceTracks, SourceExpTracks, by.x = "SOURCE_ID", by.y = "UNIVERSAL_TRACK_ID")
+remove(SourceExpTracks)
+
+NeighborDistanceTracks <-
+  DistanceTableFiltered %>%
+  select(
+    NEIGHBOR_ID,
+    PAIR
+  )
+
+

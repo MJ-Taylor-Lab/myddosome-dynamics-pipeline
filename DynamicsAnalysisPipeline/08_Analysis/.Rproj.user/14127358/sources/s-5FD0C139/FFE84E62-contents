@@ -1,0 +1,301 @@
+setwd("/Volumes/taylor-lab/Rafael/DataAnalysis/2019 Manuscript Figures/IRAK_KO/Average Intensity by Lifetime")
+
+ViolinTracks <-
+  GrandTracksKO %>%
+  filter(
+    LIGAND_DENSITY_CAT == "32 mol. µm^-2",
+  ) %>%
+  ungroup() %>%
+  mutate(
+    IMAGENUMBER = group_indices(., GROUP, IMAGE)
+  ) %>%
+  group_by(
+    GROUP
+  ) %>%
+  mutate(
+    IMAGENUMBER = IMAGENUMBER - min(IMAGENUMBER) + 1,
+    IMAGENUMBER = as.factor(IMAGENUMBER)
+  )
+
+ViolinCells <-
+  ViolinTracks %>%
+  ungroup() %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER,
+    CELL,
+    LIFETIME_CAT
+  ) %>%
+  summarize(
+    MEAN = mean(MAX_NORMALIZED_INTENSITY, na.rm = T)
+  )
+
+ViolinImg <-
+  ViolinCells %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER,
+    LIFETIME_CAT
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN, na.rm = T)
+  )
+
+ViolinLigand <-
+  ViolinImg %>%
+  group_by(
+    GROUP,
+    LIFETIME_CAT
+  ) %>%
+  summarize(
+    SD = sd(MEAN, na.rm = T),
+    SE = SD/sqrt(n()),
+    MEAN = mean(MEAN, na.rm = T)
+  )
+
+#T Test
+TestL <-
+  ViolinCells %>%
+  filter(
+    LIFETIME_CAT == "<50s"
+  ) %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER,
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN)
+  )
+
+stat.test.l <- compare_means(
+  MEAN ~ GROUP, data = TestL,
+  method = "t.test" #for non-parametric, use wilcox.test
+)
+
+stat.test.l <- stat.test.l[1:2,]
+stat.test.l$LIFETIME_CAT = "<50s"
+
+#T Test
+TestH <-
+  ViolinCells %>%
+  filter(
+    LIFETIME_CAT == "≥50s"
+  ) %>%
+  group_by(
+    GROUP,
+    IMAGENUMBER,
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN)
+  )
+
+stat.test.h <- compare_means(
+  MEAN ~ GROUP, data = TestH,
+  method = "t.test" #for non-parametric, use wilcox.test
+)
+
+stat.test.h <- stat.test.h[1:2,]
+stat.test.h$LIFETIME_CAT = "≥50s"
+
+YPos <- max(ViolinCells$MEAN)
+
+ggplot(
+  ViolinCells
+) +
+  geom_violin(
+    aes(
+      x = GROUP,
+      y = MEAN
+    ),
+    size = 2,
+    fill = "darkgrey",
+    color = "darkgrey"
+  ) +
+  geom_crossbar(
+    data = ViolinLigand,
+    aes(
+      x = GROUP,
+      ymin = MEAN,
+      y = MEAN,
+      ymax = MEAN
+    ),
+    color = "black",
+    width = 0.75
+  ) +
+  geom_errorbar(
+    data = ViolinLigand,
+    aes(
+      x = GROUP,
+      ymin = MEAN - SE,
+      ymax = MEAN + SE,
+    ),
+    color = "black",
+    width = 0.5
+  ) +
+  geom_jitter(
+    data = ViolinImg,
+    aes(
+      x = GROUP,
+      y = MEAN,
+      group = IMAGENUMBER,
+      fill = GROUP
+    ),
+    color = "black",
+    size = 3,
+    shape = 21,
+  ) +
+  stat_pvalue_manual(
+    stat.test.l,
+    y.position = c(YPos+5, YPos+15),
+    label = paste("p = {p.format}", " ({p.signif})")
+  ) +
+  stat_pvalue_manual(
+    stat.test.h,
+    y.position = c(YPos+5, YPos+15),
+    label = paste("p = {p.format}", " ({p.signif})")
+  ) +
+  scale_color_brewer(palette = "Set2") +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    y = "Mean Max Fluorescence Intensity (a.u.)",
+    x = "Lifetime",
+    color = "Replicate",
+    shape = "Replicate"
+  ) +
+  scale_y_continuous(
+    limits = c(0, YPos+20)
+  ) +
+  facet_wrap(
+    ~ LIFETIME_CAT,
+    nrow = 1,
+    scales = "free_y"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    strip.background = element_blank()
+  ) +
+  ggsave(
+    file = paste(DATE_TODAY, "Assembled-Violin-Lifetime.svg", sep="_"),
+    width = 6,
+    height = 3
+  ) +
+  ggsave(
+    file = paste(DATE_TODAY, "Assembled-Violin-Lifetime.pdf", sep="_"),
+    width = 6,
+    height = 3
+  )
+
+Summary <-
+  ViolinCells %>%
+  group_by(
+    GROUP,
+    LIFETIME_CAT,
+    IMAGENUMBER
+  ) %>%
+  summarize(
+    MEAN = mean(MEAN)
+  ) %>%
+  group_by(
+    GROUP,
+    LIFETIME_CAT
+  ) %>%
+  summarize(
+    N = n(),
+    SD = sd(MEAN),
+    MEAN = mean(MEAN),
+    SE = SD/sqrt(N)
+  )
+
+write.csv(Summary, "Summary.csv")
+# 
+# TestWT <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP == "WT",
+#     LIFETIME_CAT == "<50s"
+#   )
+# 
+# Test4 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP == "IRAK4_KO",
+#     LIFETIME_CAT == "<50s"
+#   )
+# 
+# Test1 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP == "IRAK1_KO",
+#     LIFETIME_CAT == "<50s"
+#   )
+# 
+# t.test(TestWT$MEAN, Test4$MEAN)
+# 
+# t.test(TestWT$MEAN, Test1$MEAN)
+# 
+# 
+# TestWT <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP == "WT",
+#     LIFETIME_CAT == "≥50s"
+#   )
+# 
+# Test4 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP == "IRAK4_KO",
+#     LIFETIME_CAT == "≥50s"
+#   )
+# 
+# Test1 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP == "IRAK1_KO",
+#     LIFETIME_CAT == "≥50s"
+#   )
+# 
+# t.test(TestWT$MEAN, Test4$MEAN)
+# 
+# t.test(TestWT$MEAN, Test1$MEAN)
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# Test4 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP != "IRAK1_KO",
+#     LIFETIME_CAT == "<50s"
+#   )
+# 
+# Test1 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP != "IRAK4_KO",
+#     LIFETIME_CAT == "<50s"
+#   )
+# 
+# car::Anova(lm(MEAN ~ GROUP, Test4), type = "3")
+# car::Anova(lm(MEAN ~ GROUP, Test1), type = "3")
+# 
+# Test4 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP != "IRAK1_KO",
+#     LIFETIME_CAT == "≥50s"
+#   )
+# 
+# Test1 <-
+#   ViolinCells %>%
+#   filter(
+#     GROUP != "IRAK4_KO",
+#     LIFETIME_CAT == "≥50s"
+#   )
+# 
+# car::Anova(lm(MEAN ~ GROUP, Test4), type = "3")
+# car::Anova(lm(MEAN ~ GROUP, Test1), type = "3")

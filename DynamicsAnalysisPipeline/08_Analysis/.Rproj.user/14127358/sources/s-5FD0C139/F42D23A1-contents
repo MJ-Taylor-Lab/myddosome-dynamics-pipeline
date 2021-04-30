@@ -1,0 +1,65 @@
+KO_DIRECTORY = paste(ANALYSIS_DIRECTORY, "KO Data", sep = "/")
+setwd(KO_DIRECTORY)
+
+KO_SCRIPTS <- paste(SCRIPTS_DIRECTORY, "KO", sep = "/")
+
+GROUP_LIST <-c("WT", "IRAK4_KO", "IRAK1_KO")
+
+IMAGES <- c(
+  #MyD88 (CL_028)
+  "20200501 1.5nM cl028_3E10 MyD88 001",
+  "20200502 1.5nM cl028_3E10 MyD88 001",
+  "20200502 1.5nM cl028_3E10 MyD88 002",
+  
+  #IRAK4_KO
+  "20200501 1.5nM cl139_3C4 MyD88_IRAK4-KO 001",
+  "20200502 1.5nM cl139_3C4 MyD88_IRAK4-KO 001",
+  "20200502 1.5nM cl139_3C4 MyD88_IRAK4-KO 002",
+  
+  #IRAK1_KO
+  "20200501 1.5nM cl116_2E MyD88_IRAK1 KO 001",
+  "20200502 1.5nM cl116_2E MyD88_IRAK1 KO 001",
+  "20200502 1.5nM cl116_2E MyD88_IRAK1-KO 002"
+)
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script KOMaxIntensityTablePublication.R")
+  source("KOMaxIntensityTablePublication.R", local = T)
+}, error = function(e) {print("Error with KOMaxIntensityTablePublication.R")})
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script Panel_D_MaxIntensity.R")
+  source("Panel_D_MaxIntensity.R", local = T)
+}, error = function(e) {print("Error with Panel_D_MaxIntensity.R")})
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script Panel_X_Lifetime.R")
+  source("Panel_X_Lifetime.R", local = T)
+}, error = function(e) {print("Error with Panel_X_Lifetime.R")})
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script Panel_E_PercentAssembled.R")
+  source("Panel_E_PercentAssembled.R", local = T)
+}, error = function(e) {print("Error with Panel_E_PercentAssembled.R")})
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script Panel_F_Assembled_LifetimeSorted.R")
+  source("Panel_F_Assembled_LifetimeSorted.R", local = T)
+}, error = function(e) {print("Error with Panel_F_Assembled_LifetimeSorted.R")})
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script Panel_G_AverageIntensityByLifetime.R")
+  source("Panel_G_AverageIntensityByLifetime.R", local = T)
+}, error = function(e) {print("Error with Panel_G_AverageIntensityByLifetime.R")})
+
+tryCatch({
+  setwd(KO_SCRIPTS)
+  print("Running script Panel_H_ChangeIntensityLifetime.R")
+  source("Panel_H_ChangeIntensityLifetime.R", local = T)
+}, error = function(e) {print("Error with Panel_H_ChangeIntensityLifetime.R")})

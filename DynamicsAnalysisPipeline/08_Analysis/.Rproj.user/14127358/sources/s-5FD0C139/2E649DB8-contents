@@ -1,0 +1,420 @@
+library(RANN)
+library(ggforce)
+
+DISTANCE_MAX = 5
+MIN_LIFETIME = 25
+DISTANCE_MIN = 0.1466667*3*2
+
+setwd(ANALYSIS_DIRECTORY)
+
+filename = "GrandTableSpots"
+GrandTable <-
+  data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+
+ExpTracks <-
+  GrandTable %>%
+  filter(
+    LIGAND_DENSITY_CAT == 32,
+    GROUP == "MyD88",
+    FPS == 1
+  ) %>%
+  group_by(
+    IMAGE,
+    PROTEIN,
+    FRAME
+  ) %>%
+  mutate(
+    N = n()
+  ) %>%
+  filter(
+    N > 2,
+    LIFETIME >= MIN_LIFETIME
+  ) %>%
+  ungroup()
+
+IMAGES <- unique(ExpTracks$IMAGE)
+
+DistanceImageFx <- function(ImageX) {
+  
+  print(paste("DistanceImageFx. ImageX =", ImageX))
+  
+  lp.IMAGE = IMAGES[ImageX]
+    
+  ExpTracks <-
+    ExpTracks %>%
+    filter(
+      IMAGE == lp.IMAGE
+    )
+  
+  DistanceFrameFx <- function(FrameX) {
+    tryCatch({
+      
+      print(paste("DistanceFrameFx FrameX =", FrameX,", ImageX =", ImageX))
+      
+      
+      ExpTracksCoordinates <-
+        ExpTracks %>%
+        filter(
+          FRAME == FrameX
+        ) %>%
+        select(
+          POSITION_X,
+          POSITION_Y
+        )
+      
+      Index <- nn2(data=ExpTracksCoordinates, k=4)[[1]]
+      Index <- as_tibble(Index)
+      names(Index) <- c("SOURCE_ID", "ID_NEIGHBOR_1", "ID_NEIGHBOR_2", "ID_NEIGHBOR_3")
+      
+      Index1 <-
+        Index %>%
+        mutate(
+          NEIGHBOR_ID = ID_NEIGHBOR_1,
+          RANK = 1
+        ) %>%
+        select(
+          SOURCE_ID,
+          NEIGHBOR_ID,
+          RANK
+        )
+      
+      Index2 <-
+        Index %>%
+        mutate(
+          NEIGHBOR_ID = ID_NEIGHBOR_2,
+          RANK = 2
+        ) %>%
+        select(
+          SOURCE_ID,
+          NEIGHBOR_ID,
+          RANK
+        )
+      
+      Index3 <-
+        Index %>%
+        mutate(
+          NEIGHBOR_ID = ID_NEIGHBOR_3,
+          RANK = 3
+        ) %>%
+        select(
+          SOURCE_ID,
+          NEIGHBOR_ID,
+          RANK
+        )
+      
+      Index <- rbind(Index1, Index2, Index3)
+      
+      Distance <- nn2(data=ExpTracksCoordinates, k=4)[[2]]
+      Distance <- as_tibble(Distance)
+      names(Distance) <- c("SOURCE_ID", "DISTANCE_NEIGHBOR_1", "DISTANCE_NEIGHBOR_2", "DISTANCE_NEIGHBOR_3")
+      
+      Distance1 <-
+        Distance %>%
+        mutate(
+          DISTANCE = DISTANCE_NEIGHBOR_1
+        ) %>%
+        select(
+          DISTANCE
+        )
+      
+      Distance2 <-
+        Distance %>%
+        mutate(
+          DISTANCE = DISTANCE_NEIGHBOR_2
+        ) %>%
+        select(
+          DISTANCE
+        )
+      
+      Distance3 <-
+        Distance %>%
+        mutate(
+          DISTANCE = DISTANCE_NEIGHBOR_3
+        ) %>%
+        select(
+          DISTANCE
+        )
+      
+      Distance <- rbind(Distance1, Distance2, Distance3)
+      
+      IndexDistance <- cbind(Index, Distance)
+      
+      
+      IndexDistance <-
+        IndexDistance %>%
+        rowwise() %>%
+        mutate(
+          KEY = paste(sort(c(SOURCE_ID, NEIGHBOR_ID)), collapse="")
+        ) %>%
+        distinct(
+          KEY,
+          .keep_all=T
+        ) %>%
+        select(-KEY) %>%
+        filter(
+          DISTANCE < DISTANCE_MAX
+        )
+      
+      ExpTracksNames <-
+        ExpTracks %>%
+        filter(
+          FRAME == FrameX
+        ) %>%
+        select(
+          UNIVERSAL_TRACK_ID
+        ) %>%
+        mutate(
+          ID = 1:n()
+        ) %>%
+        select(
+          ID,
+          UNIVERSAL_TRACK_ID
+        )
+      
+      IndexDistance$SOURCE_ID <-
+        ExpTracksNames$UNIVERSAL_TRACK_ID[match(IndexDistance$SOURCE_ID, ExpTracksNames$ID)]
+      
+      IndexDistance$NEIGHBOR_ID <-
+        ExpTracksNames$UNIVERSAL_TRACK_ID[match(IndexDistance$NEIGHBOR_ID, ExpTracksNames$ID)]
+      
+      IndexDistance$FRAME <- FrameX
+      
+      IndexDistance
+    }, error = function(e) {print(paste("   ERROR with DistanceFrameFx FrameX =", FrameX))})
+  }
+  
+  nFrames <- unique(ExpTracks$FRAME)
+  DistanceTable <- mclapply(nFrames, DistanceFrameFx)
+  DistanceTable <- DistanceTable[(which(sapply(DistanceTable,is.list), arr.ind=TRUE))]
+  DistanceTable <- do.call(bind_rows, DistanceTable)
+  DistanceTable <- as_tibble(DistanceTable)
+  DistanceTable
+}
+
+nImages <- 1:NROW(IMAGES)
+DistanceTable <- lapply(nImages, DistanceImageFx)
+DistanceTable <- DistanceTable[(which(sapply(DistanceTable,is.list), arr.ind=TRUE))]
+DistanceTable <- do.call(bind_rows, DistanceTable)
+DistanceTable <- as_tibble(DistanceTable)
+
+filename = "DistanceTable"
+file.remove(paste(filename, ".csv.gz", sep = ""))
+data.table::fwrite(DistanceTable, paste(filename, ".csv.gz", sep = ""), row.names = F, na = "")
+
+# setwd(ANALYSIS_DIRECTORY)
+# filename = "DistanceTable"
+# DistanceTable <-
+#   data.table::fread(paste(filename, ".csv.gz", sep = ""), integer64="character")
+
+DistanceTableFiltered <-
+  DistanceTable%>%
+  group_by(
+    SOURCE_ID,
+    NEIGHBOR_ID
+  ) %>%
+  mutate(
+    N = n()
+  ) %>%
+  filter(
+    N > 2
+  ) %>%
+  arrange(
+    SOURCE_ID,
+    NEIGHBOR_ID,
+    FRAME
+  ) %>%
+  mutate(
+    PAIR = paste(SOURCE_ID, NEIGHBOR_ID),
+    SOURCE_UNIVERSAL_SPOT_ID = paste(SOURCE_ID, FRAME, sep = "..."),
+    NEIGHBOR_UNIVERSAL_SPOT_ID = paste(NEIGHBOR_ID, FRAME, sep = "..."),
+  ) %>%
+  select(-c(N))
+  
+ExpTracksInfoSource <-
+  ExpTracks %>%
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>%
+  mutate(
+    SOURCE_MAX_FRAME = max(FRAMES_ADJUSTED),
+    SOURCE_MAX_FRAME = ifelse(SOURCE_MAX_FRAME == FRAMES_ADJUSTED, "1", "0"),
+    SOURCE_FRAME_CAT = ifelse(FRAMES_ADJUSTED == 0, "-1", SOURCE_MAX_FRAME),
+    SOURCE_NORMALIZED_INTENSITY = NORMALIZED_INTENSITY,
+    SOURCE_POSITION_X = POSITION_X,
+    SOURCE_POSITION_Y = POSITION_Y,
+    SOURCE_LIFETIME = LIFETIME
+  ) %>%
+  ungroup() %>%
+  mutate(
+    SOURCE_UNIVERSAL_SPOT_ID = UNIVERSAL_SPOT_ID
+  ) %>%
+  select(
+    SOURCE_UNIVERSAL_SPOT_ID,
+    SOURCE_FRAME_CAT,
+    SOURCE_NORMALIZED_INTENSITY,
+    SOURCE_POSITION_X,
+    SOURCE_POSITION_Y,
+    SOURCE_LIFETIME
+  )
+
+ExpTracksInfoNeighbor <-
+  ExpTracks %>%
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>%
+  mutate(
+    NEIGHBOR_MAX_FRAME = max(FRAMES_ADJUSTED),
+    NEIGHBOR_MAX_FRAME = ifelse(NEIGHBOR_MAX_FRAME == FRAMES_ADJUSTED, "1", "0"),
+    NEIGHBOR_FRAME_CAT = ifelse(FRAMES_ADJUSTED == 0, "-1", NEIGHBOR_MAX_FRAME),
+    NEIGHBOR_NORMALIZED_INTENSITY = NORMALIZED_INTENSITY,
+    NEIGHBOR_POSITION_X = POSITION_X,
+    NEIGHBOR_POSITION_Y = POSITION_Y,
+    NEIGHBOR_LIFETIME = LIFETIME
+  ) %>%
+  ungroup() %>%
+  mutate(
+    NEIGHBOR_UNIVERSAL_SPOT_ID = UNIVERSAL_SPOT_ID
+  ) %>%
+  select(
+    NEIGHBOR_UNIVERSAL_SPOT_ID,
+    NEIGHBOR_FRAME_CAT,
+    NEIGHBOR_NORMALIZED_INTENSITY,
+    NEIGHBOR_POSITION_X,
+    NEIGHBOR_POSITION_Y,
+    NEIGHBOR_LIFETIME
+  )
+  
+DistanceTableFiltered <- merge(DistanceTableFiltered, ExpTracksInfoSource, by = "SOURCE_UNIVERSAL_SPOT_ID")
+DistanceTableFiltered <- merge(DistanceTableFiltered, ExpTracksInfoNeighbor, by = "NEIGHBOR_UNIVERSAL_SPOT_ID")
+
+DistanceTableFiltered <-
+  DistanceTableFiltered %>%
+  select(-c(
+    SOURCE_UNIVERSAL_SPOT_ID,
+    NEIGHBOR_UNIVERSAL_SPOT_ID
+  )) %>%
+  group_by(
+    SOURCE_ID,
+    NEIGHBOR_ID
+  ) %>%
+  mutate(
+    SOURCE_FRAME_CAT_TEST = ifelse(SOURCE_FRAME_CAT != 0, 1, 0),
+    SOURCE_FRAME_CAT_TEST = sum(SOURCE_FRAME_CAT_TEST),
+    NEIGHBOR_FRAME_CAT_TEST = ifelse(NEIGHBOR_FRAME_CAT != 0, 1, 0),
+    NEIGHBOR_FRAME_CAT_TEST = sum(NEIGHBOR_FRAME_CAT_TEST),
+    FRAME_CAT_TEST = SOURCE_FRAME_CAT_TEST + NEIGHBOR_FRAME_CAT_TEST,
+    MIN_DISTANCE = min(DISTANCE),
+    SOURCE_INTENSITY_CHANGE = SOURCE_NORMALIZED_INTENSITY/lag(SOURCE_NORMALIZED_INTENSITY),
+    NEIGHBOR_INTENSITY_CHANGE = NEIGHBOR_NORMALIZED_INTENSITY/lag(NEIGHBOR_NORMALIZED_INTENSITY)
+  ) %>%
+  filter(
+    FRAME_CAT_TEST != 0,
+    MIN_DISTANCE <= DISTANCE_MIN
+  )
+
+EligiblePairs <-
+  DistanceTableFiltered %>%
+  filter(
+    DISTANCE <= DISTANCE_MIN,
+    SOURCE_FRAME_CAT != 0 | NEIGHBOR_FRAME_CAT != 0
+  ) %>%
+  ungroup() %>%
+  select(
+    PAIR
+  ) %>%
+  distinct()
+
+EligiblePairs <- as.array(EligiblePairs$PAIR)
+
+DistanceTableFiltered <-
+  DistanceTableFiltered %>%
+  filter(
+    PAIR %in% EligiblePairs
+  )
+
+filename = "DistanceTableFiltered"
+file.remove(paste(filename, ".csv.gz", sep = ""))
+data.table::fwrite(DistanceTableFiltered, paste(filename, ".csv.gz", sep = ""), row.names = F, na = "")
+
+PAIRS <- unique(DistanceTableFiltered$PAIR)
+
+DistancePlotFx <- function(PageX) {
+  tryCatch({
+    
+    DistancePlot <-
+      DistanceTableFiltered %>%
+      filter(
+        PAIR %in% PAIRS[1+PageX:20*PageX]
+      )
+    
+    Plot <-
+      ggplot(
+        data = DistancePlot
+      ) +
+      geom_path(
+        aes(
+          x = NEIGHBOR_POSITION_X,
+          y = NEIGHBOR_POSITION_Y,
+          group = NEIGHBOR_ID,
+          color = NEIGHBOR_NORMALIZED_INTENSITY
+        ),
+        size = 1.25) +
+      geom_path(
+        aes(
+          x = SOURCE_POSITION_X,
+          y = SOURCE_POSITION_Y,
+          group = SOURCE_ID,
+          color = SOURCE_NORMALIZED_INTENSITY
+        ),
+        size = 1.25) +
+      scale_color_viridis("Normalized Intensity", option="inferno") +
+      new_scale_color() +
+      facet_wrap(
+        ~ PAIR,
+        scales = "free",
+        nrow = 4,
+        ncol = 5
+      ) +
+      geom_point(
+        data = DistancePlot %>% filter(NEIGHBOR_FRAME_CAT != 0),
+        aes(
+          x = NEIGHBOR_POSITION_X,
+          y = NEIGHBOR_POSITION_Y,
+          color = NEIGHBOR_FRAME_CAT
+        )
+      ) +
+      geom_point(
+        data = DistancePlot %>% filter(SOURCE_FRAME_CAT != 0),
+        aes(
+          x = SOURCE_POSITION_X,
+          y = SOURCE_POSITION_Y,
+          color = SOURCE_FRAME_CAT
+        )
+      ) +
+      scale_color_brewer(palette = "Set1")+
+      scale_x_continuous(
+        expand = c(0,0)
+      ) +
+      scale_y_reverse(
+        expand = c(0,0)
+      ) +
+      labs(
+        y = "y-position (µm)",
+        x = "x-position (µm)",
+        color = "Frame Category"
+      ) +
+      theme_classic()
+    
+    Plot
+    
+  }, error = function(e) {print(paste("   ERROR with ColocalizationIntensityImageFx ImageX =", ImageX))})
+}
+
+nPlots = 1:ceiling(NROW(unique(DistanceTableFiltered$PAIR))/20)
+Plots <- mclapply(nPlots, DistancePlotFx)
+
+pdf("rplot.pdf", height = 9, width = 16) 
+Plot
+dev.off()
+
+#ggsave(paste(DATE_TODAY, PROTEIN, "TrackPosition.pdf",sep="_"), height = 8*RATIO, width = 8)
