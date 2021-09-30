@@ -132,6 +132,7 @@ ColocalizationGroupsFx <- function(GroupX) {
       GroupData <-
         ColocalizationImgs %>%
         filter(
+          FRAMES_ADJUSTED == 0,
           GROUP_ID %in% GROUP_IDS
         ) %>%
         mutate(
