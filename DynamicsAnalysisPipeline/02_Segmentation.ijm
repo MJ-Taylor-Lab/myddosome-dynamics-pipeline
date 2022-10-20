@@ -19,6 +19,7 @@
 #@ Boolean (label = "Run segmentation on C=0", value = true) runSegmentationC0
 #@ Boolean (label = "Run segmentation on C=1", value = true) runSegmentationC1
 #@ Boolean (label = "Run segmentation, only one channel available", value = false) runSegmentation
+#@ Boolean (label = "Invert LUT", value = false) runInversion
 
 // --- SEGMENT --
 dir = dir + "/";
